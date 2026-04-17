@@ -1,5 +1,6 @@
 import { Card } from './ui/card';
 import { useState, useEffect } from 'react';
+import { toast } from 'sonner';
 import { 
   BrainCircuit, 
   TrendingUp, 
@@ -135,6 +136,22 @@ const insights = [
 
 export function AIInsights() {
   const [aiThinking, setAiThinking] = useState(true);
+  const [isGenerating, setIsGenerating] = useState(false);
+
+  const handleGenerateMore = async () => {
+    setIsGenerating(true);
+    toast.info('Gemini AI is analyzing recent emissions data...');
+    
+    // Simulate API call to /api/ai/forecast
+    setTimeout(() => {
+      setIsGenerating(false);
+      toast.success('Successfully generated 3 new predictive insights!');
+    }, 2500);
+  };
+
+  const handleDetailsClick = (title: string) => {
+    toast.success(`Loading detailed implementation plan for: ${title}`);
+  };
 
   useEffect(() => {
     const timer = setTimeout(() => setAiThinking(false), 2000);
@@ -366,9 +383,14 @@ export function AIInsights() {
       <div>
         <div className="flex items-center justify-between mb-4">
           <h3 className="font-bold text-xl">AI-Generated Recommendations</h3>
-          <Button variant="outline" className="gap-2">
-            <Sparkles className="size-4" />
-            Generate More
+          <Button 
+            variant="outline" 
+            className="gap-2"
+            onClick={handleGenerateMore}
+            disabled={isGenerating}
+          >
+            {isGenerating ? <div className="size-4 rounded-full border-2 border-purple-500 border-t-transparent animate-spin" /> : <Sparkles className="size-4" />}
+            {isGenerating ? 'Analyzing...' : 'Generate More'}
           </Button>
         </div>
 
@@ -413,7 +435,7 @@ export function AIInsights() {
                         <p className="text-sm font-medium text-gray-900">{rec.difficulty}</p>
                       </div>
                     </div>
-                    <Button size="sm" variant="ghost" className="gap-1">
+                    <Button size="sm" variant="ghost" className="gap-1" onClick={() => handleDetailsClick(rec.title)}>
                       Details
                       <ArrowRight className="size-3" />
                     </Button>

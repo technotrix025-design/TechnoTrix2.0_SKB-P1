@@ -62,8 +62,14 @@ export function Settings() {
     supplierUpdates: false
   });
 
+  const [isSaving, setIsSaving] = useState(false);
+
   const handleSaveSettings = () => {
-    toast.success('Settings saved successfully!');
+    setIsSaving(true);
+    setTimeout(() => {
+      setIsSaving(false);
+      toast.success('Settings saved successfully!');
+    }, 1000);
   };
 
   return (
@@ -170,8 +176,9 @@ export function Settings() {
           </Card>
 
           <div className="flex justify-end">
-            <Button onClick={handleSaveSettings} className="bg-gradient-to-r from-emerald-500 to-teal-600">
-              Save Company Settings
+            <Button onClick={handleSaveSettings} disabled={isSaving} className="bg-gradient-to-r from-emerald-500 to-teal-600 w-48">
+              {isSaving ? <div className="size-4 rounded-full border-2 border-white border-t-transparent animate-spin mr-2" /> : null}
+              {isSaving ? 'Saving...' : 'Save Company Settings'}
             </Button>
           </div>
         </TabsContent>
@@ -220,8 +227,9 @@ export function Settings() {
           </Card>
 
           <div className="flex justify-end">
-            <Button onClick={handleSaveSettings} className="bg-gradient-to-r from-emerald-500 to-teal-600">
-              Save Profile
+            <Button onClick={handleSaveSettings} disabled={isSaving} className="bg-gradient-to-r from-emerald-500 to-teal-600 w-32">
+              {isSaving ? <div className="size-4 rounded-full border-2 border-white border-t-transparent animate-spin mr-2" /> : null}
+              {isSaving ? 'Saving...' : 'Save Profile'}
             </Button>
           </div>
         </TabsContent>
@@ -289,8 +297,9 @@ export function Settings() {
           </Card>
 
           <div className="flex justify-end">
-            <Button onClick={handleSaveSettings} className="bg-gradient-to-r from-emerald-500 to-teal-600">
-              Save Notification Settings
+            <Button onClick={handleSaveSettings} disabled={isSaving} className="bg-gradient-to-r from-emerald-500 to-teal-600 w-56">
+              {isSaving ? <div className="size-4 rounded-full border-2 border-white border-t-transparent animate-spin mr-2" /> : null}
+              {isSaving ? 'Saving...' : 'Save Notification Settings'}
             </Button>
           </div>
         </TabsContent>
@@ -413,7 +422,7 @@ export function Settings() {
           <Card className="p-6">
             <h3 className="font-bold text-lg mb-4">Data Management</h3>
             <div className="space-y-3">
-              <Button variant="outline" className="w-full justify-start gap-2">
+              <Button variant="outline" className="w-full justify-start gap-2" onClick={() => toast.success('Data export started. You will receive an email when ready.')}>
                 <Download className="size-4" />
                 Export All Data
               </Button>

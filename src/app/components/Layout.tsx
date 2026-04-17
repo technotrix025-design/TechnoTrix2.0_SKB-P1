@@ -10,18 +10,21 @@ import {
   Menu,
   X,
   Sparkles,
-  Trophy
+  Trophy,
+  Bot,
+  LogOut
 } from 'lucide-react';
+import { supabase } from '../../lib/supabase';
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 
 const navigation = [
-  { name: 'Hackathon Info', href: '/', icon: Trophy, badge: '🏆' },
   { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
   { name: 'AI Data Ingestion', href: '/data-ingestion', icon: Sparkles, badge: 'NEW' },
   { name: 'Emissions Tracking', href: '/emissions', icon: Gauge },
   { name: 'Supplier Management', href: '/suppliers', icon: Users },
   { name: 'AI Insights', href: '/ai-insights', icon: BrainCircuit },
+  { name: 'AI Chat Assistant', href: '/ai-chat', icon: Bot, badge: 'AI' },
   { name: 'Reports & Compliance', href: '/reports', icon: FileText },
   { name: 'Settings', href: '/settings', icon: SettingsIcon },
 ];
@@ -60,8 +63,14 @@ export function Layout() {
                 <div className="size-2 bg-emerald-500 rounded-full animate-pulse"></div>
                 <span className="text-sm font-medium text-emerald-700">Real-time Monitoring Active</span>
               </div>
-              <div className="size-10 bg-gradient-to-br from-emerald-500 to-teal-600 rounded-full flex items-center justify-center text-white font-semibold">
-                A
+              <div className="flex gap-2">
+                <button 
+                  onClick={() => supabase.auth.signOut()}
+                  className="px-4 py-2 text-sm font-medium text-emerald-700 hover:bg-emerald-50 rounded-lg transition-colors flex items-center gap-2"
+                >
+                  <LogOut className="size-4" />
+                  Log out
+                </button>
               </div>
             </div>
           </div>

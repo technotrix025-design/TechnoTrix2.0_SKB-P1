@@ -1,3 +1,4 @@
+import { Link } from 'react-router';
 import { Card } from './ui/card';
 import { 
   Trophy,
@@ -12,7 +13,8 @@ import {
   Globe,
   Shield,
   Users,
-  ArrowRight
+  ArrowRight,
+  Leaf
 } from 'lucide-react';
 import { motion } from 'motion/react';
 import { Button } from './ui/button';
@@ -91,8 +93,36 @@ const marketImpact = [
 
 export function HackathonShowcase() {
   return (
-    <div className="space-y-8">
-      {/* Hero Section */}
+    <div className="min-h-screen bg-gray-50 flex flex-col">
+      {/* Header */}
+      <header className="bg-white/80 backdrop-blur-md border-b border-emerald-100 sticky top-0 z-50">
+        <div className="px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto w-full">
+          <div className="flex items-center justify-between h-16">
+            <div className="flex items-center gap-3">
+              <div className="bg-gradient-to-br from-emerald-500 to-teal-600 p-2 rounded-lg">
+                <Leaf className="size-6 text-white" />
+              </div>
+              <div>
+                <h1 className="font-bold text-lg bg-gradient-to-r from-emerald-700 to-teal-600 bg-clip-text text-transparent">
+                  EcoTrack AI
+                </h1>
+              </div>
+            </div>
+            
+            <div className="flex gap-2">
+              <Link to="/login" className="px-4 py-2 text-sm font-medium text-emerald-700 hover:bg-emerald-50 rounded-lg transition-colors">
+                Log in
+              </Link>
+              <Link to="/login?mode=signup" className="px-4 py-2 text-sm font-medium text-white bg-emerald-600 hover:bg-emerald-700 rounded-lg shadow-sm transition-colors">
+                Sign up
+              </Link>
+            </div>
+          </div>
+        </div>
+      </header>
+
+      <main className="flex-1 space-y-8 p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto w-full">
+        {/* Hero Section */}
       <div className="text-center py-12 px-4 bg-gradient-to-br from-emerald-500 via-teal-600 to-blue-600 rounded-2xl text-white relative overflow-hidden">
         <motion.div
           initial={{ scale: 0 }}
@@ -333,10 +363,12 @@ export function HackathonShowcase() {
             Join the future of sustainable business intelligence with AI-powered automation
           </p>
           <div className="flex gap-4 justify-center flex-wrap">
-            <Button size="lg" className="bg-white text-emerald-700 hover:bg-emerald-50 gap-2">
-              <Rocket className="size-5" />
-              Start Demo
-            </Button>
+            <Link to="/login">
+              <Button size="lg" className="bg-white text-emerald-700 hover:bg-emerald-50 gap-2">
+                <Rocket className="size-5" />
+                Start Demo
+              </Button>
+            </Link>
             <Button size="lg" variant="outline" className="border-white text-white hover:bg-white/10 gap-2">
               <ArrowRight className="size-5" />
               View Documentation
@@ -344,6 +376,7 @@ export function HackathonShowcase() {
           </div>
         </motion.div>
       </Card>
+      </main>
     </div>
   );
 }

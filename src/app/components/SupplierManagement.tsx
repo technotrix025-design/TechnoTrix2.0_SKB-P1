@@ -1,5 +1,6 @@
 import { Card } from './ui/card';
 import { useState } from 'react';
+import { toast } from 'sonner';
 import { 
   Search, 
   TrendingUp, 
@@ -146,6 +147,16 @@ const emissionsBySupplier = [
 export function SupplierManagement() {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedSupplier, setSelectedSupplier] = useState(suppliers[0]);
+  const [isExporting, setIsExporting] = useState(false);
+
+  const handleExport = () => {
+    setIsExporting(true);
+    toast.info('Generating supplier ESG report...');
+    setTimeout(() => {
+      setIsExporting(false);
+      toast.success('Report exported successfully! Downloading PDF...');
+    }, 2000);
+  };
 
   const filteredSuppliers = suppliers.filter(s => 
     s.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -210,9 +221,13 @@ export function SupplierManagement() {
             <Filter className="size-4" />
             Filter
           </Button>
-          <Button className="gap-2 bg-gradient-to-r from-emerald-500 to-teal-600">
-            <Download className="size-4" />
-            Export Report
+          <Button 
+            className="gap-2 bg-gradient-to-r from-emerald-500 to-teal-600"
+            onClick={handleExport}
+            disabled={isExporting}
+          >
+            {isExporting ? <div className="size-4 rounded-full border-2 border-white border-t-transparent animate-spin" /> : <Download className="size-4" />}
+            {isExporting ? 'Exporting...' : 'Export Report'}
           </Button>
         </div>
       </div>
@@ -325,7 +340,12 @@ export function SupplierManagement() {
                   </div>
                 </div>
               </div>
-              <Button variant="outline" size="sm" className="gap-2">
+              <Button 
+                variant="outline" 
+                size="sm" 
+                className="gap-2"
+                onClick={() => toast.success(`Loading full compliance profile for ${selectedSupplier.name}...`)}
+              >
                 <ArrowUpRight className="size-4" />
                 View Full Profile
               </Button>

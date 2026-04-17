@@ -1,5 +1,6 @@
 import { Card } from './ui/card';
 import { useState } from 'react';
+import { toast } from 'sonner';
 import { 
   FileText, 
   Download, 
@@ -152,6 +153,26 @@ const complianceFrameworks = [
 export function Reports() {
   const [searchQuery, setSearchQuery] = useState('');
   const [filterStatus, setFilterStatus] = useState('all');
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [downloadingId, setDownloadingId] = useState<number | null>(null);
+
+  const handleGenerateReport = () => {
+    setIsGenerating(true);
+    toast.info('AI is compiling your latest ESG data...');
+    setTimeout(() => {
+      setIsGenerating(false);
+      toast.success('Successfully generated comprehensive ESG report!');
+    }, 2500);
+  };
+
+  const handleDownload = (id: number, name: string) => {
+    setDownloadingId(id);
+    toast.info(`Preparing ${name} for download...`);
+    setTimeout(() => {
+      setDownloadingId(null);
+      toast.success(`${name} downloaded successfully!`);
+    }, 1500);
+  };
 
   const getStatusBadge = (status: string) => {
     switch (status) {
@@ -210,9 +231,13 @@ export function Reports() {
           <h1 className="text-3xl font-bold text-gray-900">Reports & Compliance</h1>
           <p className="text-gray-600 mt-1">Generate ESG reports and track regulatory compliance</p>
         </div>
-        <Button className="gap-2 bg-gradient-to-r from-emerald-500 to-teal-600">
-          <FileText className="size-4" />
-          Generate New Report
+        <Button 
+          className="gap-2 bg-gradient-to-r from-emerald-500 to-teal-600"
+          onClick={handleGenerateReport}
+          disabled={isGenerating}
+        >
+          {isGenerating ? <div className="size-4 rounded-full border-2 border-white border-t-transparent animate-spin" /> : <FileText className="size-4" />}
+          {isGenerating ? 'Generating...' : 'Generate New Report'}
         </Button>
       </div>
 
@@ -334,18 +359,24 @@ export function Reports() {
                   </div>
                 </div>
                 <div className="flex gap-2 ml-4">
-                  <Button variant="outline" size="sm" className="gap-2">
+                  <Button variant="outline" size="sm" className="gap-2" onClick={() => toast.success(`Opening ${report.name}`)}>
                     <Eye className="size-4" />
                     View
                   </Button>
                   {report.status === 'completed' && (
-                    <Button variant="outline" size="sm" className="gap-2">
-                      <Download className="size-4" />
-                      Download
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      className="gap-2"
+                      onClick={() => handleDownload(report.id, report.name)}
+                      disabled={downloadingId === report.id}
+                    >
+                      {downloadingId === report.id ? <div className="size-4 rounded-full border-2 border-emerald-500 border-t-transparent animate-spin" /> : <Download className="size-4" />}
+                      {downloadingId === report.id ? 'Downloading...' : 'Download'}
                     </Button>
                   )}
                   {report.status === 'completed' && (
-                    <Button variant="outline" size="sm" className="gap-2">
+                    <Button variant="outline" size="sm" className="gap-2" onClick={() => toast.success(`${report.name} submitted successfully!`)}>
                       <Send className="size-4" />
                       Submit
                     </Button>

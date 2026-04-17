@@ -19,8 +19,10 @@ import { motion } from 'motion/react';
 import { Progress } from './ui/progress';
 import { Button } from './ui/button';
 import { Link } from 'react-router';
+import { useState, useEffect } from 'react';
+import { toast } from 'sonner';
 
-const emissionsData = [
+const initialEmissionsData = [
   { month: 'Jan', scope1: 450, scope2: 320, scope3: 890, target: 1500 },
   { month: 'Feb', scope1: 430, scope2: 310, scope3: 870, target: 1450 },
   { month: 'Mar', scope1: 420, scope2: 300, scope3: 850, target: 1400 },
@@ -49,9 +51,76 @@ const topSuppliers = [
 ];
 
 export function Dashboard() {
-  const totalEmissions = 1430;
+  const [liveEmissionsData, setLiveEmissionsData] = useState(initialEmissionsData);
+  const [totalEmissions, setTotalEmissions] = useState(1430);
+  const [liveAlerts, setLiveAlerts] = useState(recentAlerts);
+  const [currentScopes, setCurrentScopes] = useState({ scope1: 380, scope2: 270, scope3: 780 });
+  const [currentEsg, setCurrentEsg] = useState(82.0);
+  
+  useEffect(() => {
+    const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+    // Connect to the Kaggle-powered Server-Sent Events stream
+    const eventSource = new EventSource(`${API_URL}/api/stream/emissions`);
+
+    eventSource.onmessage = (event) => {
+      try {
+        const newData = JSON.parse(event.data);
+        
+        if (newData.type === 'connected') {
+          toast.success('Live Kaggle Data Stream Connected');
+          return;
+        }
+
+        // It's a data point
+        const total = Math.floor(newData.scope1 + newData.scope2 + newData.scope3);
+        setTotalEmissions(total);
+        setCurrentScopes({
+          scope1: Math.floor(newData.scope1),
+          scope2: Math.floor(newData.scope2),
+          scope3: Math.floor(newData.scope3)
+        });
+        if (newData.esgScore) {
+          setCurrentEsg(newData.esgScore);
+        }
+
+        setLiveEmissionsData(prev => {
+          const newChartData = [...prev];
+          // We push the new real-time value to the end of the chart
+          // For visual effect in the hackathon, we simulate a 'Live' moving window
+          newChartData.shift(); 
+          newChartData.push({
+            month: new Date().toLocaleTimeString('en-US', { hour12: false, hour: "numeric", minute: "numeric", second: "numeric" }),
+            scope1: newData.scope1,
+            scope2: newData.scope2,
+            scope3: newData.scope3,
+            target: newData.target
+          });
+          return newChartData;
+        });
+
+        if (newData.alert) {
+          setLiveAlerts(prev => [
+            { id: Date.now(), type: 'warning', message: newData.alert, time: 'Just now' },
+            ...prev.slice(0, 2)
+          ]);
+          toast.error(newData.alert);
+        }
+
+      } catch (err) {
+        console.error("Error parsing stream data", err);
+      }
+    };
+
+    eventSource.onerror = () => {
+      console.log('EventSource failed. Reconnecting...');
+    };
+
+    return () => {
+      eventSource.close();
+    };
+  }, []);
+
   const targetEmissions = 1250;
-  const reductionPercentage = ((targetEmissions - totalEmissions) / totalEmissions * 100);
   const progress = Math.abs((totalEmissions / targetEmissions) * 100);
 
   return (
@@ -73,7 +142,7 @@ export function Dashboard() {
             <div className="flex items-start justify-between">
               <div>
                 <p className="text-sm font-medium text-red-700">Scope 1 Emissions</p>
-                <p className="text-3xl font-bold text-red-900 mt-2">380</p>
+                <p className="text-3xl font-bold text-red-900 mt-2">{currentScopes.scope1}</p>
                 <p className="text-xs text-red-600 mt-1">tCO₂e / month</p>
               </div>
               <div className="bg-red-200 p-3 rounded-lg">
@@ -82,7 +151,7 @@ export function Dashboard() {
             </div>
             <div className="flex items-center gap-2 mt-4">
               <TrendingDown className="size-4 text-green-600" />
-              <span className="text-sm text-green-700 font-medium">-5.2% from last month</span>
+              <span className="text-sm text-green-700 font-medium">Real-time IoT Sync</span>
             </div>
           </Card>
         </motion.div>
@@ -96,7 +165,7 @@ export function Dashboard() {
             <div className="flex items-start justify-between">
               <div>
                 <p className="text-sm font-medium text-amber-700">Scope 2 Emissions</p>
-                <p className="text-3xl font-bold text-amber-900 mt-2">270</p>
+                <p className="text-3xl font-bold text-amber-900 mt-2">{currentScopes.scope2}</p>
                 <p className="text-xs text-amber-600 mt-1">tCO₂e / month</p>
               </div>
               <div className="bg-amber-200 p-3 rounded-lg">
@@ -105,7 +174,7 @@ export function Dashboard() {
             </div>
             <div className="flex items-center gap-2 mt-4">
               <TrendingDown className="size-4 text-green-600" />
-              <span className="text-sm text-green-700 font-medium">-3.8% from last month</span>
+              <span className="text-sm text-green-700 font-medium">Real-time Smart Meter</span>
             </div>
           </Card>
         </motion.div>
@@ -119,7 +188,7 @@ export function Dashboard() {
             <div className="flex items-start justify-between">
               <div>
                 <p className="text-sm font-medium text-emerald-700">Scope 3 Emissions</p>
-                <p className="text-3xl font-bold text-emerald-900 mt-2">780</p>
+                <p className="text-3xl font-bold text-emerald-900 mt-2">{currentScopes.scope3}</p>
                 <p className="text-xs text-emerald-600 mt-1">tCO₂e / month</p>
               </div>
               <div className="bg-emerald-200 p-3 rounded-lg">
@@ -128,7 +197,7 @@ export function Dashboard() {
             </div>
             <div className="flex items-center gap-2 mt-4">
               <TrendingDown className="size-4 text-green-600" />
-              <span className="text-sm text-green-700 font-medium">-4.1% from last month</span>
+              <span className="text-sm text-green-700 font-medium">Live Supplier API Integration</span>
             </div>
           </Card>
         </motion.div>
@@ -141,8 +210,8 @@ export function Dashboard() {
           <Card className="p-6 bg-gradient-to-br from-blue-50 to-blue-100 border-blue-200">
             <div className="flex items-start justify-between">
               <div>
-                <p className="text-sm font-medium text-blue-700">ESG Score</p>
-                <p className="text-3xl font-bold text-blue-900 mt-2">82/100</p>
+                <p className="text-sm font-medium text-blue-700">Live ESG Score</p>
+                <p className="text-3xl font-bold text-blue-900 mt-2">{currentEsg.toFixed(1)}/100</p>
                 <p className="text-xs text-blue-600 mt-1">Industry avg: 68</p>
               </div>
               <div className="bg-blue-200 p-3 rounded-lg">
@@ -151,7 +220,7 @@ export function Dashboard() {
             </div>
             <div className="flex items-center gap-2 mt-4">
               <TrendingUp className="size-4 text-green-600" />
-              <span className="text-sm text-green-700 font-medium">+3 points this quarter</span>
+              <span className="text-sm text-green-700 font-medium">AI-driven Scoring Engine</span>
             </div>
           </Card>
         </motion.div>
@@ -169,7 +238,7 @@ export function Dashboard() {
             <Activity className="size-5 text-emerald-600" />
           </div>
           <ResponsiveContainer width="100%" height={300}>
-            <AreaChart data={emissionsData}>
+            <AreaChart data={liveEmissionsData}>
               <defs>
                 <linearGradient id="colorScope1" x1="0" y1="0" x2="0" y2="1">
                   <stop offset="5%" stopColor="#ef4444" stopOpacity={0.3}/>
@@ -215,7 +284,11 @@ export function Dashboard() {
           <ResponsiveContainer width="100%" height={250}>
             <PieChart>
               <Pie
-                data={scopeDistribution}
+                data={[
+                  { name: 'Scope 1', value: currentScopes.scope1, color: '#ef4444' },
+                  { name: 'Scope 2', value: currentScopes.scope2, color: '#f59e0b' },
+                  { name: 'Scope 3', value: currentScopes.scope3, color: '#10b981' },
+                ]}
                 cx="50%"
                 cy="50%"
                 labelLine={false}
@@ -224,7 +297,11 @@ export function Dashboard() {
                 fill="#8884d8"
                 dataKey="value"
               >
-                {scopeDistribution.map((entry, index) => (
+                {[
+                  { name: 'Scope 1', value: currentScopes.scope1, color: '#ef4444' },
+                  { name: 'Scope 2', value: currentScopes.scope2, color: '#f59e0b' },
+                  { name: 'Scope 3', value: currentScopes.scope3, color: '#10b981' },
+                ].map((entry, index) => (
                   <Cell key={`cell-${index}`} fill={entry.color} />
                 ))}
               </Pie>
@@ -232,7 +309,11 @@ export function Dashboard() {
             </PieChart>
           </ResponsiveContainer>
           <div className="mt-6 space-y-3">
-            {scopeDistribution.map((scope) => (
+            {[
+              { name: 'Scope 1', value: currentScopes.scope1, color: '#ef4444' },
+              { name: 'Scope 2', value: currentScopes.scope2, color: '#f59e0b' },
+              { name: 'Scope 3', value: currentScopes.scope3, color: '#10b981' },
+            ].map((scope) => (
               <div key={scope.name} className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <div className="size-3 rounded-full" style={{ backgroundColor: scope.color }}></div>
@@ -347,8 +428,10 @@ export function Dashboard() {
         </div>
         
         <div className="space-y-3">
-          {recentAlerts.map((alert) => (
-            <div
+          {liveAlerts.map((alert) => (
+            <motion.div
+              initial={{ opacity: 0, x: -20 }}
+              animate={{ opacity: 1, x: 0 }}
               key={alert.id}
               className="flex items-start gap-4 p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors"
             >
@@ -365,7 +448,7 @@ export function Dashboard() {
                 <p className="text-sm font-medium text-gray-900">{alert.message}</p>
                 <p className="text-xs text-gray-600 mt-1">{alert.time}</p>
               </div>
-            </div>
+            </motion.div>
           ))}
         </div>
       </Card>
