@@ -66,24 +66,6 @@ An **AI-powered digital platform** that centralizes ESG data, automates GHG emis
 │ IoT │ ERP │ REST API │ CSV/Excel │ Supplier Portal │
 └─────────────────────────────────────────────────────────────────┘
 
-┌─────────────────────────────────────────────────────────────────┐
-│ USER INTERFACE LAYER │
-│ Admin Dashboard │ Supplier Portal │ Board View │
-├─────────────────────────────────────────────────────────────────┤
-│ APPLICATION LAYER │
-│ Analytics │ Reporting │ Alerting │ Compliance │ Export │
-├─────────────────────────────────────────────────────────────────┤
-│ INTELLIGENCE LAYER │
-│ Anomaly Detection │ Forecasting │ Supplier Scoring │
-├─────────────────────────────────────────────────────────────────┤
-│ PROCESSING LAYER │
-│ ETL Pipeline │ Normalizer │ Factor Mapper │ Aggregator │
-├─────────────────────────────────────────────────────────────────┤
-│ DATA COLLECTION LAYER │
-│ IoT │ ERP │ REST API │ CSV/Excel │ Supplier Portal │
-└─────────────────────────────────────────────────────────────────┘
-
-text
 
 ### Tech Stack
 
@@ -117,8 +99,8 @@ text
 ## TechnoTrix 2.0
 
 # Team Name
-## Pranay Rajkondawar
-## Mayur Harde
-## Pranay Pancahwate
-## Hement Bhure
-## Mrunal Khapekar
+### Pranay Rajkondawar
+### Mayur Harde
+### Pranay Pancahwate
+### Hement Bhure
+### Mrunal Khapekar
