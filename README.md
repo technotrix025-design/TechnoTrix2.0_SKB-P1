@@ -113,12 +113,12 @@ text
 | Purchased Goods | USD | 0.35 kg CO2e | Scope 3 | EXIOBASE |
 
 
-###  Team Name
+#  Team Name
 ## TechnoTrix 2.0
 
-### Team Name
-# Pranay Rajkondawar
-# Mayur Harde
-# Pranay Pancahwate
-# Hement Bhure
-# Mrunal Khapekar
+# Team Name
+## Pranay Rajkondawar
+## Mayur Harde
+## Pranay Pancahwate
+## Hement Bhure
+## Mrunal Khapekar
