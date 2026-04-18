@@ -1,58 +1,67 @@
 import express from 'express';
-import { fetchKaggleData } from '../utils/kaggle.js';
+import { supabase } from '../utils/supabase.js';
 
 const router = express.Router();
 
+// GET /api/stream/emissions — SSE stream backed by real Supabase data
 router.get('/emissions', async (req, res) => {
-  // Setup Server-Sent Events headers
   res.setHeader('Content-Type', 'text/event-stream');
   res.setHeader('Cache-Control', 'no-cache');
   res.setHeader('Connection', 'keep-alive');
+  res.setHeader('X-Accel-Buffering', 'no');
 
-  // Send initial connected message
-  res.write(`data: ${JSON.stringify({ type: 'connected', message: 'Stream initialized' })}\n\n`);
+  res.write(`data: ${JSON.stringify({ type: 'connected', message: 'Real-time Supabase stream initialised' })}\n\n`);
 
-  try {
-    const dataset = await fetchKaggleData();
-    let currentIndex = 0;
+  const fetchLive = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('emissions')
+        .select('type, amount, date')
+        .order('date', { ascending: false })
+        .limit(200);
 
-    // Stream a new data point every 3 seconds to simulate real-time IoT sensors
-    const interval = setInterval(() => {
-      if (currentIndex >= dataset.length) {
-        currentIndex = 0; // Loop back for continuous simulation
-      }
+      if (error) throw error;
 
-      const rawDataRow = dataset[currentIndex];
-      
-      // Map the raw Kaggle data (or mock data) to our dashboard format
-      // We add some dynamic noise to make it look active and real-time
-      const randomNoise = (Math.random() * 20) - 10;
-      
-      const streamPayload = {
+      const sum = (type) => data.filter(e => e.type === type).reduce((s, e) => s + parseFloat(e.amount || 0), 0);
+      const hasData = data.length > 0;
+      const s1 = hasData ? sum('Scope 1') : 350 + (Math.random() * 6 - 3);
+      const s2 = hasData ? sum('Scope 2') : 270 + (Math.random() * 4 - 2);
+      const s3 = hasData ? sum('Scope 3') : 780 + (Math.random() * 10 - 5);
+
+      return {
         timestamp: new Date().toISOString(),
-        scope1: rawDataRow.scope1 ? parseInt(rawDataRow.scope1) + randomNoise : 350 + randomNoise,
-        scope2: rawDataRow.scope2 ? parseInt(rawDataRow.scope2) + randomNoise : 270 + randomNoise,
-        scope3: rawDataRow.scope3 ? parseInt(rawDataRow.scope3) + randomNoise : 780 + randomNoise,
-        esgScore: 82 + (Math.random() * 1.5 - 0.5), // Fluctuates slightly
-        alert: Math.random() > 0.95 ? 'Anomaly detected in Supplier network' : null,
-        target: 1500
+        scope1: parseFloat(s1.toFixed(2)),
+        scope2: parseFloat(s2.toFixed(2)),
+        scope3: parseFloat(s3.toFixed(2)),
+        total: parseFloat((s1 + s2 + s3).toFixed(2)),
+        target: 1500,
+        source: hasData ? 'supabase' : 'demo',
+        rowCount: data.length,
+        alert: Math.random() > 0.97 ? 'Anomaly detected in Scope 3 supplier network' : null,
       };
+    } catch (err) {
+      console.error('[Stream] Error:', err.message);
+      return {
+        timestamp: new Date().toISOString(),
+        scope1: 350, scope2: 270, scope3: 780, total: 1400,
+        target: 1500, source: 'fallback', rowCount: 0, alert: null,
+      };
+    }
+  };
 
-      res.write(`data: ${JSON.stringify(streamPayload)}\n\n`);
-      currentIndex++;
-    }, 3000);
+  // Immediate first payload
+  const first = await fetchLive();
+  res.write(`data: ${JSON.stringify(first)}\n\n`);
 
-    // Clean up on client disconnect
-    req.on('close', () => {
-      clearInterval(interval);
-      console.log('Client disconnected from emissions stream');
-    });
+  const interval = setInterval(async () => {
+    const payload = await fetchLive();
+    res.write(`data: ${JSON.stringify(payload)}\n\n`);
+  }, 5000);
 
-  } catch (error) {
-    console.error('Streaming error:', error);
-    res.write(`data: ${JSON.stringify({ type: 'error', message: 'Failed to stream data' })}\n\n`);
-    res.end();
-  }
+  req.on('close', () => {
+    clearInterval(interval);
+    console.log('[Stream] Client disconnected');
+  });
 });
 
 export default router;

@@ -137,16 +137,43 @@ const insights = [
 export function AIInsights() {
   const [aiThinking, setAiThinking] = useState(true);
   const [isGenerating, setIsGenerating] = useState(false);
+  const [generatedInsights, setGeneratedInsights] = useState<string[]>([]);
+
+  const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
 
   const handleGenerateMore = async () => {
     setIsGenerating(true);
-    toast.info('Gemini AI is analyzing recent emissions data...');
-    
-    // Simulate API call to /api/ai/forecast
-    setTimeout(() => {
+    toast.info('Gemini AI is analyzing emissions data…');
+
+    try {
+      const res = await fetch(`${API_URL}/api/ai/chat`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          message: 'Analyze these emissions: Scope 1 = 380 tCO2e, Scope 2 = 270 tCO2e, Scope 3 = 780 tCO2e (total 1430). ESG Score 82.6/100. Give 3 short, specific predictive insights with percentages. Be concise, each insight max 1 sentence. Format as a JSON array of strings.',
+        }),
+      });
+      const json = await res.json();
+      // Try to parse the AI response as a JSON array of strings
+      try {
+        const parsed = JSON.parse(json.reply || '[]');
+        if (Array.isArray(parsed)) {
+          setGeneratedInsights(prev => [...parsed.slice(0, 3), ...prev].slice(0, 6));
+          toast.success(`Generated ${parsed.length} new AI insights!`);
+        } else {
+          setGeneratedInsights(prev => [json.reply, ...prev].slice(0, 6));
+          toast.success('Generated new AI insight!');
+        }
+      } catch {
+        // If not valid JSON, just use the raw reply
+        setGeneratedInsights(prev => [json.reply || 'No insight generated', ...prev].slice(0, 6));
+        toast.success('Generated new AI insight!');
+      }
+    } catch (err) {
+      toast.error('Failed to generate insights — check backend connection');
+    } finally {
       setIsGenerating(false);
-      toast.success('Successfully generated 3 new predictive insights!');
-    }, 2500);
+    }
   };
 
   const handleDetailsClick = (title: string) => {
@@ -192,8 +219,8 @@ export function AIInsights() {
       {/* Header */}
       <div className="flex items-start justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">AI-Powered Insights</h1>
-          <p className="text-gray-600 mt-1">Predictive analytics and intelligent recommendations</p>
+          <h1 className="text-3xl font-bold text-gray-900 dark:text-white">AI-Powered Insights</h1>
+          <p className="text-gray-600 dark:text-gray-400 mt-1">Predictive analytics and intelligent recommendations</p>
         </div>
         <div className="flex items-center gap-3 px-4 py-2 bg-gradient-to-r from-purple-50 to-pink-50 rounded-lg border border-purple-200">
           <BrainCircuit className="size-5 text-purple-600" />
@@ -229,6 +256,35 @@ export function AIInsights() {
           </motion.div>
         ))}
       </div>
+
+      {/* AI-Generated Insights (from Gemini) */}
+      {generatedInsights.length > 0 && (
+        <Card className="p-6 border-2 border-purple-200 dark:border-purple-800 bg-gradient-to-br from-purple-50 to-indigo-50 dark:from-purple-900/10 dark:to-indigo-900/10">
+          <div className="flex items-center gap-2 mb-4">
+            <Sparkles className="size-5 text-purple-600 dark:text-purple-400" />
+            <h3 className="font-bold text-lg text-purple-900 dark:text-purple-300">Gemini AI Analysis</h3>
+            <span className="ml-auto text-xs text-purple-500">Live from Gemini</span>
+          </div>
+          <div className="space-y-3">
+            {generatedInsights.map((insight, i) => (
+              <motion.div
+                key={i}
+                initial={{ opacity: 0, x: -20 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ delay: i * 0.1 }}
+                className="p-3 bg-white/60 dark:bg-gray-900/40 rounded-lg border border-purple-100 dark:border-purple-800"
+              >
+                <div className="flex items-start gap-3">
+                  <div className="p-1 bg-purple-100 dark:bg-purple-900/50 rounded">
+                    <BrainCircuit className="size-4 text-purple-600 dark:text-purple-400" />
+                  </div>
+                  <p className="text-sm text-gray-800 dark:text-gray-300">{insight}</p>
+                </div>
+              </motion.div>
+            ))}
+          </div>
+        </Card>
+      )}
 
       {/* Emissions Forecast */}
       <Card className="p-6">

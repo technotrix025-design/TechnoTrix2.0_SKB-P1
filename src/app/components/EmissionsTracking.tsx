@@ -161,8 +161,8 @@ export function EmissionsTracking() {
       {/* Header */}
       <div className="flex items-start justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">Emissions Tracking</h1>
-          <p className="text-gray-600 mt-1">Monitor and analyze greenhouse gas emissions across all scopes</p>
+          <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Emissions Tracking</h1>
+          <p className="text-gray-600 dark:text-gray-400 mt-1">Monitor and analyze greenhouse gas emissions across all scopes</p>
         </div>
         <div className="flex gap-2">
           <Button variant="outline" className="gap-2" onClick={() => toast.success('Filter options opened')}>

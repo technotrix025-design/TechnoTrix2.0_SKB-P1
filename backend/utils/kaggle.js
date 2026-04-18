@@ -117,3 +117,66 @@ function getMockData() {
   }
   return mockData;
 }
+
+// ── Separate cache for raw dataset (used by ML Analytics page) ──
+let rawDatasetCache = [];
+
+export const fetchKaggleDataset = async () => {
+  if (rawDatasetCache.length > 0) return rawDatasetCache;
+
+  const username = process.env.KAGGLE_USERNAME;
+  const key = process.env.KAGGLE_KEY;
+
+  if (!username || !key) {
+    console.warn('[Kaggle] Credentials missing — returning mock dataset');
+    rawDatasetCache = getMockDataset();
+    return rawDatasetCache;
+  }
+
+  const datasetOwner = 'yoannboyere';
+  const datasetName = 'co2-ghg-emissionsdata';
+  const url = `https://www.kaggle.com/api/v1/datasets/download/${datasetOwner}/${datasetName}`;
+
+  try {
+    console.log('[Kaggle] Downloading dataset for ML analytics...');
+    const auth = Buffer.from(`${username}:${key}`).toString('base64');
+    const zipBuffer = await downloadFile(url, auth);
+
+    const zip = new AdmZip(zipBuffer);
+    const csvEntry = zip.getEntries().find(e => e.entryName.endsWith('.csv'));
+    if (!csvEntry) throw new Error('No CSV in zip');
+
+    const results = await parseCSV(csvEntry.getData());
+    console.log(`[Kaggle] Parsed ${results.length} rows for ML analytics`);
+    rawDatasetCache = results;
+    return results;
+  } catch (err) {
+    console.error('[Kaggle] Dataset fetch failed:', err.message);
+    rawDatasetCache = getMockDataset();
+    return rawDatasetCache;
+  }
+};
+
+// Mock dataset resembling the real Kaggle CO2 data schema
+function getMockDataset() {
+  const countries = ['India', 'China', 'United States', 'Germany', 'Japan', 'Brazil', 'United Kingdom', 'France', 'Russia', 'South Korea'];
+  const data = [];
+  for (const country of countries) {
+    const baseVal = Math.random() * 3000 + 200;
+    for (let year = 1950; year <= 2023; year++) {
+      const growth = 1 + ((year - 1950) / 73) * (Math.random() * 0.5 + 0.3);
+      const noise = (Math.random() - 0.5) * baseVal * 0.05;
+      data.push({
+        country,
+        year: String(year),
+        co2: String(Math.max(10, Math.round(baseVal * growth + noise))),
+        methane: String(Math.round((baseVal * growth * 0.15) + noise * 0.3)),
+        nitrous_oxide: String(Math.round((baseVal * growth * 0.05) + noise * 0.1)),
+        population: String(Math.round(Math.random() * 1e9 + 5e7)),
+        gdp: String(Math.round(Math.random() * 2e13 + 1e11)),
+        co2_per_capita: String(Math.round((baseVal * growth / (Math.random() * 500 + 50)) * 100) / 100),
+      });
+    }
+  }
+  return data;
+}

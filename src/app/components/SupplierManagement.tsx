@@ -213,8 +213,8 @@ export function SupplierManagement() {
       {/* Header */}
       <div className="flex items-start justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">Supplier Management</h1>
-          <p className="text-gray-600 mt-1">ESG scoring and emissions tracking for your supply chain</p>
+          <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Supplier Management</h1>
+          <p className="text-gray-600 dark:text-gray-400 mt-1">ESG scoring and emissions tracking for your supply chain</p>
         </div>
         <div className="flex gap-2">
           <Button variant="outline" className="gap-2">

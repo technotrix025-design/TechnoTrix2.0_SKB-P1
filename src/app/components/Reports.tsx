@@ -228,8 +228,8 @@ export function Reports() {
       {/* Header */}
       <div className="flex items-start justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">Reports & Compliance</h1>
-          <p className="text-gray-600 mt-1">Generate ESG reports and track regulatory compliance</p>
+          <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Reports & Compliance</h1>
+          <p className="text-gray-600 dark:text-gray-400 mt-1">Generate ESG reports and track regulatory compliance</p>
         </div>
         <Button 
           className="gap-2 bg-gradient-to-r from-emerald-500 to-teal-600"
