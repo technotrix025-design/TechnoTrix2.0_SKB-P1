@@ -12,14 +12,13 @@ import {
   Clock,
   Wifi
 } from 'lucide-react';
-import { PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, Area, AreaChart } from 'recharts';
+import { PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, Area, AreaChart, Line } from 'recharts';
 import { motion } from 'motion/react';
 import { Progress } from './ui/progress';
 import { Button } from './ui/button';
 import { Link } from 'react-router';
 import { useState, useEffect, useRef } from 'react';
 import { toast } from 'sonner';
-import { supabase } from '@/lib/supabase';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
 
@@ -153,17 +152,8 @@ export function Dashboard() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // ── 3. Supabase Realtime — instant update when any emission is inserted ──
-  useEffect(() => {
-    const channel = supabase
-      .channel('dashboard-emissions')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'emissions' }, () => {
-        // A new emission was added — refresh summary via SSE will pick it up in ≤5s
-        toast.info('New emission data recorded — updating dashboard…');
-      })
-      .subscribe();
-    return () => { supabase.removeChannel(channel); };
-  }, []);
+  // SSE stream above already polls Supabase every 5s — no separate realtime subscription needed.
+  // (Enable Supabase Replication on the emissions table for true instant push updates)
 
   const targetEmissions = 1250;
   const progress = Math.abs((totalEmissions / targetEmissions) * 100);

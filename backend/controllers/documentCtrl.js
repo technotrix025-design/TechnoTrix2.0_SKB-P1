@@ -15,6 +15,7 @@ export const parseDocument = async (req, res) => {
   }
 
   const { originalname, mimetype, path: filePath, size } = req.file;
+  const companyName = req.body?.companyName || 'Unknown Company';
 
   // Guard: ensure API key is configured
   if (!process.env.GEMINI_API_KEY) {
@@ -31,6 +32,7 @@ export const parseDocument = async (req, res) => {
 
     const prompt = `
 You are an ESG emissions data extraction expert. Analyze this document carefully.
+This document belongs to: ${companyName}
 Extract all emission-relevant information and return a structured JSON response.
 
 The document could be: electricity bill, fuel receipt, gas bill, travel invoice, supplier invoice, delivery note, or any other emission-related document.
@@ -97,8 +99,9 @@ Rules:
           type: extracted.scope,
           amount: extracted.co2eEstimate,
           source: extracted.documentType || 'AI Document Parse',
-          description: `Auto-extracted from ${originalname} | ${extracted.vendor || ''} | ${extracted.period || ''}`,
+          description: `[${companyName}] Auto-extracted from ${originalname} | ${extracted.vendor || ''} | ${extracted.period || ''}`,
           date: new Date().toISOString().split('T')[0],
+          metadata: { companyName, vendor: extracted.vendor, period: extracted.period },
         }).select().single();
         savedEmission = data;
       }

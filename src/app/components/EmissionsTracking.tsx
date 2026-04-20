@@ -18,7 +18,10 @@ import { Button } from './ui/button';
 import { Badge } from './ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
 
-const monthlyData = [
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+
+// Fallback static data used until API responds
+const FALLBACK_MONTHLY = [
   { month: 'Jan', scope1: 450, scope2: 320, scope3: 890, total: 1660 },
   { month: 'Feb', scope1: 430, scope2: 310, scope3: 870, total: 1610 },
   { month: 'Mar', scope1: 420, scope2: 300, scope3: 850, total: 1570 },
@@ -62,9 +65,49 @@ export function EmissionsTracking() {
   const [liveDailyEmissions, setLiveDailyEmissions] = useState(dailyEmissions);
   const [liveTotal, setLiveTotal] = useState(1430);
   const [liveScopes, setLiveScopes] = useState({ scope1: 380, scope2: 270, scope3: 780 });
+  const [monthlyData, setMonthlyData] = useState(FALLBACK_MONTHLY);
+  const [dbConnected, setDbConnected] = useState(false);
 
+  // ── 1. Fetch real monthly breakdown from Supabase via API ──
   useEffect(() => {
-    const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+    fetch(`${API_URL}/api/emissions`)
+      .then(r => r.json())
+      .then(({ success, data }) => {
+        if (!success || !Array.isArray(data) || data.length === 0) return;
+        setDbConnected(true);
+
+        // Group emissions by month and scope
+        const byMonth: Record<string, { scope1: number; scope2: number; scope3: number }> = {};
+        data.forEach((row: any) => {
+          const month = new Date(row.date || row.created_at).toLocaleString('default', { month: 'short' });
+          if (!byMonth[month]) byMonth[month] = { scope1: 0, scope2: 0, scope3: 0 };
+          const amt = parseFloat(row.amount || 0);
+          if (row.type === 'Scope 1') byMonth[month].scope1 += amt;
+          else if (row.type === 'Scope 2') byMonth[month].scope2 += amt;
+          else if (row.type === 'Scope 3') byMonth[month].scope3 += amt;
+        });
+
+        const built = Object.entries(byMonth).map(([month, s]) => ({
+          month,
+          scope1: parseFloat(s.scope1.toFixed(1)),
+          scope2: parseFloat(s.scope2.toFixed(1)),
+          scope3: parseFloat(s.scope3.toFixed(1)),
+          total: parseFloat((s.scope1 + s.scope2 + s.scope3).toFixed(1)),
+        }));
+
+        if (built.length > 0) {
+          setMonthlyData(built);
+          const latest = built[built.length - 1];
+          setLiveTotal(latest.total);
+          setLiveScopes({ scope1: latest.scope1, scope2: latest.scope2, scope3: latest.scope3 });
+          toast.success(`Loaded ${data.length} real emission records from Supabase`);
+        }
+      })
+      .catch(() => { /* fallback data remains */ });
+  }, []);
+
+  // ── 2. SSE Stream — live scope values every 5s ──
+  useEffect(() => {
     const eventSource = new EventSource(`${API_URL}/api/stream/emissions`);
     eventSource.onmessage = (event) => {
       try {
@@ -75,23 +118,40 @@ export function EmissionsTracking() {
         setLiveScopes({
           scope1: Math.floor(newData.scope1),
           scope2: Math.floor(newData.scope2),
-          scope3: Math.floor(newData.scope3)
+          scope3: Math.floor(newData.scope3),
         });
 
-        // Simulate daily tracking updates
         setLiveDailyEmissions(prev => {
           const updated = [...prev];
-          const todayIndex = updated.length - 1; // Assuming Sunday is current day
+          const todayIndex = updated.length - 1;
           updated[todayIndex] = {
             ...updated[todayIndex],
-            emissions: Math.floor(newData.scope1 / 10 + Math.random() * 5)
+            emissions: Math.floor(newData.scope1 / 10 + Math.random() * 5),
           };
           return updated;
         });
-
-      } catch (err) {}
+      } catch (_) {}
     };
     return () => eventSource.close();
+  }, []);
+
+  // ── 3. Poll API every 30s to pick up new emissions without Supabase Realtime ──
+  useEffect(() => {
+    const poll = () => {
+      fetch(`${API_URL}/api/emissions/summary`)
+        .then(r => r.json())
+        .then(({ success, data }) => {
+          if (success && data) {
+            setLiveScopes({
+              scope1: parseFloat(data['Scope 1'] || 0),
+              scope2: parseFloat(data['Scope 2'] || 0),
+              scope3: parseFloat(data['Scope 3'] || 0),
+            });
+          }
+        }).catch(() => {});
+    };
+    const timer = setInterval(poll, 30000); // every 30 seconds
+    return () => clearInterval(timer);
   }, []);
 
   const handleExport = () => {
@@ -243,8 +303,10 @@ export function EmissionsTracking() {
       <Card className="p-6">
         <div className="flex items-center justify-between mb-6">
           <div>
-            <h3 className="font-bold text-lg">6-Month Emissions Trend</h3>
-            <p className="text-sm text-gray-600">All scopes combined analysis</p>
+            <h3 className="font-bold text-lg">Emissions Trend</h3>
+            <p className="text-sm text-gray-600">
+              {dbConnected ? '✅ Live data from Supabase DB' : 'Historical analysis (demo data)'}
+            </p>
           </div>
           <div className="flex gap-2">
             <Badge variant="outline" className="bg-red-50">Scope 1</Badge>

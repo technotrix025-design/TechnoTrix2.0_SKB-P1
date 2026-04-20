@@ -2,9 +2,10 @@ import { Card } from './ui/card';
 import { useState, useRef, useCallback } from 'react';
 import {
   Upload, FileText, Image as ImageIcon, CheckCircle2, AlertCircle,
-  Sparkles, Zap, Database, Loader2, FileCheck, TrendingUp,
-  Calendar, MapPin, X, Eye, Leaf, Factory, Truck, FileX
+  Sparkles, Zap, Database, Loader2, FileCheck,
+  Calendar, MapPin, X, Eye, Leaf, Factory, Truck, FileX, Building2
 } from 'lucide-react';
+import { Input } from './ui/input';
 import { motion, AnimatePresence } from 'motion/react';
 import { Button } from './ui/button';
 import { Badge } from './ui/badge';
@@ -72,9 +73,21 @@ export function DataIngestion() {
   const [isDragging, setIsDragging] = useState(false);
   const [files, setFiles] = useState<UploadedFile[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [companyName, setCompanyName] = useState('');
+  const [companySuggestions] = useState([
+    'Tata Steel Ltd', 'Reliance Industries', 'Infosys Ltd',
+    'Mahindra & Mahindra', 'ONGC', 'BHEL', 'ITC Limited',
+  ]);
   const inputRef = useRef<HTMLInputElement>(null);
+  const companyRef = useRef<HTMLInputElement>(null);
 
-  const addFiles = useCallback((incoming: File[]) => {
+  const addFiles = useCallback((incoming: File[], company?: string) => {
+    const cn = company ?? companyName;
+    if (!cn.trim()) {
+      toast.warning('Please enter the company name before uploading.');
+      companyRef.current?.focus();
+      return;
+    }
     const valid = incoming.filter(f =>
       ['application/pdf', 'image/jpeg', 'image/jpg', 'image/png', 'image/webp'].includes(f.type)
     );
@@ -92,10 +105,11 @@ export function DataIngestion() {
     }));
 
     setFiles(prev => [...entries, ...prev]);
-    entries.forEach(e => uploadFile(e));
-  }, []);
+    entries.forEach(e => uploadFile(e, cn));
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [companyName]);
 
-  const uploadFile = async (entry: UploadedFile) => {
+  const uploadFile = async (entry: UploadedFile, company: string) => {
     const update = (patch: Partial<UploadedFile>) =>
       setFiles(prev => prev.map(f => f.id === entry.id ? { ...f, ...patch } : f));
 
@@ -105,6 +119,7 @@ export function DataIngestion() {
 
       const formData = new FormData();
       formData.append('document', entry.file);
+      if (company) formData.append('companyName', company);
 
       // Step 1: AI processing
       update({ status: 'processing', stepIndex: 1, progress: 35 });
@@ -166,6 +181,15 @@ export function DataIngestion() {
     totalCO2e: files.filter(f => f.result?.co2eEstimate).reduce((s, f) => s + (f.result!.co2eEstimate ?? 0), 0),
   };
 
+  // Dynamic accuracy: 0% until files processed, then based on confidence
+  const aiAccuracy = (() => {
+    const done = files.filter(f => f.status === 'done' && f.result);
+    if (done.length === 0) return '0%';
+    const scoreMap: Record<string, number> = { high: 100, medium: 75, low: 45 };
+    const avg = done.reduce((s, f) => s + (scoreMap[f.result!.confidence] ?? 75), 0) / done.length;
+    return `${Math.round(avg)}%`;
+  })();
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -189,7 +213,7 @@ export function DataIngestion() {
         {[
           { label: 'Docs Processed', value: stats.done, sub: 'this session', icon: FileCheck, color: 'purple' },
           { label: 'Processing Now', value: stats.processing, sub: 'in queue', icon: Loader2, color: 'blue' },
-          { label: 'AI Accuracy', value: '99.2%', sub: 'Gemini Vision', icon: Sparkles, color: 'emerald' },
+          { label: 'AI Accuracy', value: aiAccuracy, sub: stats.done > 0 ? `${stats.done} doc${stats.done > 1 ? 's' : ''} processed` : 'Upload a bill to start', icon: Sparkles, color: 'emerald' },
           { label: 'CO₂e Extracted', value: `${stats.totalCO2e.toFixed(1)}t`, sub: 'auto-calculated', icon: Leaf, color: 'amber' },
         ].map(({ label, value, sub, icon: Icon, color }) => {
           const c = KPI_COLORS[color];
@@ -206,6 +230,44 @@ export function DataIngestion() {
         })}
       </div>
 
+      {/* Company Name Input */}
+      <Card className="p-5 border-2 border-emerald-100 dark:border-emerald-900/40 bg-gradient-to-r from-emerald-50/50 to-teal-50/50 dark:from-emerald-900/10 dark:to-teal-900/10">
+        <div className="flex items-center gap-3 mb-3">
+          <div className="p-2 bg-emerald-100 dark:bg-emerald-900/30 rounded-lg">
+            <Building2 className="size-5 text-emerald-600 dark:text-emerald-400" />
+          </div>
+          <div>
+            <p className="font-bold text-gray-900 dark:text-white text-sm">Company / Organisation Name</p>
+            <p className="text-xs text-gray-500 dark:text-gray-400">Whose ESG report / bills are you uploading?</p>
+          </div>
+        </div>
+        <Input
+          ref={companyRef}
+          value={companyName}
+          onChange={e => setCompanyName(e.target.value)}
+          placeholder="e.g. Tata Steel Ltd, Reliance Industries, My Company Pvt Ltd…"
+          className="bg-white dark:bg-gray-900 border-emerald-200 dark:border-emerald-800 focus:ring-emerald-500"
+        />
+        {/* Quick-fill suggestions */}
+        {!companyName && (
+          <div className="flex flex-wrap gap-2 mt-3">
+            <span className="text-xs text-gray-400">Quick fill:</span>
+            {companySuggestions.map(s => (
+              <button
+                key={s}
+                onClick={() => setCompanyName(s)}
+                className="text-xs px-2 py-1 rounded-full bg-white dark:bg-gray-800 border border-emerald-200 dark:border-emerald-700 text-emerald-700 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-900/30 transition-colors"
+              >{s}</button>
+            ))}
+          </div>
+        )}
+        {companyName && (
+          <p className="text-xs text-emerald-600 dark:text-emerald-400 mt-2 flex items-center gap-1">
+            <CheckCircle2 className="size-3" /> All uploaded documents will be tagged to <strong>{companyName}</strong>
+          </p>
+        )}
+      </Card>
+
       {/* Drop Zone */}
       <Card
         className={`border-2 border-dashed transition-all ${isDragging ? 'border-emerald-500 bg-emerald-50 dark:bg-emerald-900/10 scale-[1.01]' : 'border-gray-300 dark:border-gray-700 hover:border-emerald-400'}`}
@@ -221,7 +283,9 @@ export function DataIngestion() {
             {isDragging ? '✨ Drop to analyze with Gemini AI' : 'Upload Documents for AI Processing'}
           </h3>
           <p className="text-gray-500 dark:text-gray-400 mb-6">
-            Drag & drop utility bills, fuel receipts, or supplier invoices
+            {companyName
+              ? <span>Analyzing bills for <strong className="text-emerald-600 dark:text-emerald-400">{companyName}</strong></span>
+              : 'Enter company name above, then drag & drop utility bills, fuel receipts, or invoices'}
           </p>
           <div className="flex items-center justify-center gap-4 mb-5">
             <Button
@@ -335,6 +399,12 @@ export function DataIngestion() {
                       }
                       <div className="flex-1">
                         <p className="font-bold text-gray-900 dark:text-white">{selectedFile.file.name}</p>
+                        {companyName && (
+                          <div className="flex items-center gap-1.5 mb-0.5">
+                            <Building2 className="size-3 text-emerald-600" />
+                            <p className="text-xs font-semibold text-emerald-700 dark:text-emerald-400">{companyName}</p>
+                          </div>
+                        )}
                         <p className="text-sm text-gray-500 dark:text-gray-400">{selectedFile.result.documentType}</p>
                         <div className="flex items-center gap-2 mt-1.5 flex-wrap">
                           <Badge className={`text-xs border ${SCOPE_COLORS[selectedFile.result.scope] ?? 'bg-gray-100 text-gray-700'}`}>
